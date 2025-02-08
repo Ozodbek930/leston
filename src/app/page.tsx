@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import supabase from "./supabaseClient";
 import React from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+
 interface User {
   id: number;
   name: string;
@@ -11,17 +12,14 @@ interface User {
   image?: string;
 }
 
-const [users, setUsers] = useState<User[]>([]);
-
-
 const Page = () => {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
   const [image, setImage] = useState<File | null>(null);
-  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [disableInputs, setDisableInputs] = useState(false);
 
   const fetchUsers = async () => {
@@ -29,17 +27,20 @@ const Page = () => {
     const { data: usersData, error: usersError } = await supabase
       .from("Users")
       .select("*");
+
     if (usersError) {
       console.error("Error fetching users:", usersError.message);
       setLoading(false);
       return;
     }
+
     const usersWithImages = await Promise.all(
-      usersData.map(async (user) => {
+      usersData.map(async (user: User) => {
         const { data } = supabase.storage.from("Img").getPublicUrl(`${user.id}.jpg`);
         return { ...user, image: data.publicUrl };
       })
     );
+
     setUsers(usersWithImages);
     setLoading(false);
   };
@@ -50,8 +51,10 @@ const Page = () => {
 
   const handleSaveUser = async () => {
     if (!name || !age || !email) return;
+
     setDisableInputs(true);
     setTimeout(() => setDisableInputs(false), 3000);
+
     if (editingUser) {
       await supabase.from("Users").update({ name, age, email }).eq("id", editingUser.id);
       if (image) {
@@ -65,6 +68,7 @@ const Page = () => {
         await supabase.storage.from("Img").upload(`${data[0].id}.jpg`, image);
       }
     }
+    
     setName("");
     setAge("");
     setEmail("");
@@ -72,7 +76,7 @@ const Page = () => {
     fetchUsers();
   };
 
-  const deleteUser = async (id: any) => {
+  const deleteUser = async (id: number) => {
     await supabase.from("Users").delete().eq("id", id);
     await supabase.storage.from("Img").remove([`${id}.jpg`]);
     fetchUsers();
@@ -87,13 +91,7 @@ const Page = () => {
           className="form-control mb-2"
           accept="image/*"
           disabled={disableInputs}
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              setImage(e.target.files[0]);
-            } else {
-              setImage(null);
-            }
-          }}
+          onChange={(e) => setImage(e.target.files?.[0] || null)}
         />
         <input
           type="text"
@@ -142,20 +140,12 @@ const Page = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((user: any) => (
+            {users.map((user) => (
               <tr key={user.id}>
-                <td>
-                  <h3>{user.id}</h3>
-                </td>
-                <td>
-                  <h3>{user.name}</h3>
-                </td>
-                <td>
-                  <h3>{user.age}</h3>
-                </td>
-                <td>
-                  <h3>{user.email}</h3>
-                </td>
+                <td><h3>{user.id}</h3></td>
+                <td><h3>{user.name}</h3></td>
+                <td><h3>{user.age}</h3></td>
+                <td><h3>{user.email}</h3></td>
                 <td>
                   <img
                     src={user.image}
@@ -171,7 +161,7 @@ const Page = () => {
                     onClick={() => {
                       setEditingUser(user);
                       setName(user.name);
-                      setAge(user.age);
+                      setAge(String(user.age));
                       setEmail(user.email);
                     }}
                   >
